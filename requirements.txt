@@ -8,6 +8,9 @@ tabulate
 libcst
 pandas
 sacrebleu
-peft
+peft==0.10.0
 openai
 datasets
+numpy<2
+huggingface-hub<1.0,>=0.19.3
+wandb
