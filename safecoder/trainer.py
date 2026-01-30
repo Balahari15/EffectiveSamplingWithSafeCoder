@@ -31,6 +31,14 @@ class LossDict:
                 s = sum(l) / len(l) / args.grad_acc_steps
                 p.append(f'{k}: {round(s, 6)}')
         return ', '.join(p)
+    #Temp function to return formatted loss values for logging in wandb
+    def wandb_log_dict(self, args):
+        p = []
+        for k, l in self.d.items():
+            if len(l) > 0:
+                s = sum(l) / len(l) / args.grad_acc_steps
+                p.append(round(s, 6))
+        return p
 
     def clear(self):
         for key in self.keys:
@@ -87,6 +95,7 @@ class Trainer:
         self.model = None
         self.tokenizer = None
         self.dataset = None
+        self.wandb_run= self.args.wandb_run
         if self.args.sven:
             self.loss_keys = ['lm', 'contra', 'kl']
         else:
@@ -147,7 +156,9 @@ class Trainer:
         correct_logits, correct_label_probs = get_logits_from_lm(self.model, inputs, control_ids)
         lm_loss = token_weighted_loss('ce', correct_logits, shift_inputs, shift_weights)
         loss_dict['lm'].append(lm_loss.item())
-
+        if self.wandb_run is not None:
+            self.wandb_run.log({"lm_loss": float(lm_loss.item())})
+        # contrastive loss
         incorrect_control_ids = -1 * (control_ids - 1)
         incorrect_logits, incorrect_label_probs = get_logits_from_lm(self.model, inputs, incorrect_control_ids)
 
@@ -158,7 +169,9 @@ class Trainer:
         contrastive_loss = token_weighted_loss('nll', contrastive_log_probs, contrastive_labels, shift_weights)
         contrastive_loss *= 4
         loss_dict['contra'].append(contrastive_loss.item())
-
+        if self.wandb_run is not None:
+            self.wandb_run.log({"contrastive_loss": float  (contrastive_loss)})
+        # kl loss
         assert self.args.kl_loss_weight > 0
         correct_log_probs = F.log_softmax(correct_logits, dim=-1)
         self.model.eval()
@@ -171,9 +184,11 @@ class Trainer:
         kl_loss += token_weighted_loss('kl', incorrect_log_probs, ref_log_probs, 1-shift_weights)
         kl_loss = kl_loss * self.args.kl_loss_weight / 1000
         loss_dict['kl'].append(kl_loss.item())
-
+        if self.wandb_run is not None:
+            self.wandb_run.log({"kl_loss": float(kl_loss)})
         loss_total = lm_loss + contrastive_loss + kl_loss
-
+        if self.wandb_run is not None:
+            self.wandb_run.log({"total_loss": float(loss_total)}) 
         return loss_total, loss_dict
 
     def do_eval(self):
@@ -182,6 +197,9 @@ class Trainer:
         acc_loss_dict = LossDict(self.loss_keys)
         for batch in val_dataloader:
             loss, loss_dict = self.sven_step(batch) if self.args.sven else self.step(batch)
+            if self.wandb_run is not None:
+                for k in loss_dict.d:
+                    self.wandb_run.log({f"val_{k}_loss": float(loss_dict.d[k][0])})
             acc_loss_dict.step(loss_dict)
         return acc_loss_dict.pretty_print(self.args)
 
@@ -287,6 +305,16 @@ class Trainer:
                     if self.args.logging_steps > 0 and global_step % self.args.logging_steps == 0:
                         acc_loss_pp = acc_loss_dict.pretty_print(self.args)
                         self.args.logger.info('epochs: %s/%d, steps: %s/%d, %s, %s', idx+1, self.args.num_train_epochs, global_step, total_steps, acc_loss_pp, timer)
+                        wandb_log_dict= acc_loss_dict.wandb_log_dict(self.args)
+                        if self.wandb_run is not None:
+                            self.wandb_run.log({"epoch": float(idx+1),
+                                                "steps":float(global_step),
+                                                "total_steps": float(total_steps),
+                                                "func":float(wandb_log_dict[0]),
+                                                "pos":float(wandb_log_dict[1]),
+                                                "neg":float(wandb_log_dict[2]),
+                                                })
+
                         acc_loss_dict.clear()
 
                     timer.end()
@@ -309,9 +337,13 @@ class Trainer:
             with torch.no_grad():
                 eval_loss_pp = self.do_eval()
             self.args.logger.info('final eval loss: %s', eval_loss_pp)
+            if self.wandb_run is not None:
+                self.wandb_run.summary({"final_eval_loss": float(eval_loss_pp)})
             # output_dir = os.path.join(self.args.output_dir, f'checkpoint-epoch-{idx+1}')
             last_output_dir = os.path.join(self.args.output_dir, f'checkpoint-last')
             # self.args.logger.info('Saving model checkpoint to %s and %s', output_dir, last_output_dir)
             self.args.logger.info('Saving model checkpoint to %s', last_output_dir)
             # self.save(output_dir)
             self.save(last_output_dir)
+        self.wandb_run.finish()
+        

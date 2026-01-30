@@ -74,7 +74,9 @@ VULNERABILITY_DETECTION_SPECIFIC = (
     "Does the following code snippet contain a {cwe}: \"{cwe_desc}\" security vulnerability? Only answer \"Yes\" or \"No\".\n\n{code}"
 )
 
-SAFE_DESC_DATASETS = ['sec-desc', 'sec-new-desc']
+SAFE_DESC_DATASETS = ['sec-desc', 'sec-new-desc',
+                      'size_strategy_50_seed42','size_strategy_100_seed42','size_strategy_200_seed42','size_strategy_400_seed42','size_strategy_800_seed42','size_strategy_1141_seed42',
+                      'seed_strategy_400_seed42','seed_strategy_400_seed43','seed_strategy_400_seed44','seed_strategy_400_seed45','seed_strategy_400_seed46','seed_strategy_400_seed47']
 
 CWES_TRAINED = [
     'cwe-022',

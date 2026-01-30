@@ -1,6 +1,6 @@
 import os
 import argparse
-
+import wandb
 from safecoder.utils import set_seed, set_logging
 from safecoder.trainer import Trainer
 
@@ -112,6 +112,14 @@ def main():
     args = get_args()
     set_logging(args, os.path.join(args.output_dir, 'train.log'))
     set_seed(args.seed)
+    args.wandb_run = wandb.init(
+        # Set the wandb entity where your project will be logged (generally your team name).
+        entity="balaharivignesh-balu-technische-hochschule-ingolstadt",
+         # Set the wandb project where this run will be logged.
+        project="EffectiveSampling",
+        # Track hyperparameters and run metadata.
+        name=args.output_name, config=vars(args))
+    
     Trainer(args).run()
 
 if __name__ == '__main__':
