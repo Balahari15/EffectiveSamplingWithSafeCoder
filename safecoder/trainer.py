@@ -170,7 +170,7 @@ class Trainer:
         contrastive_loss *= 4
         loss_dict['contra'].append(contrastive_loss.item())
         if self.wandb_run is not None:
-            self.wandb_run.log({"contrastive_loss": float  (contrastive_loss)})
+            self.wandb_run.log({"contrastive_loss": float  (contrastive_loss.item())})
         # kl loss
         assert self.args.kl_loss_weight > 0
         correct_log_probs = F.log_softmax(correct_logits, dim=-1)
@@ -185,10 +185,10 @@ class Trainer:
         kl_loss = kl_loss * self.args.kl_loss_weight / 1000
         loss_dict['kl'].append(kl_loss.item())
         if self.wandb_run is not None:
-            self.wandb_run.log({"kl_loss": float(kl_loss)})
+            self.wandb_run.log({"kl_loss": float(kl_loss.item())})
         loss_total = lm_loss + contrastive_loss + kl_loss
         if self.wandb_run is not None:
-            self.wandb_run.log({"total_loss": float(loss_total)}) 
+            self.wandb_run.log({"total_loss": float(loss_total.item())}) 
         return loss_total, loss_dict
 
     def do_eval(self):
@@ -197,9 +197,6 @@ class Trainer:
         acc_loss_dict = LossDict(self.loss_keys)
         for batch in val_dataloader:
             loss, loss_dict = self.sven_step(batch) if self.args.sven else self.step(batch)
-            if self.wandb_run is not None:
-                for k in loss_dict.d:
-                    self.wandb_run.log({f"val_{k}_loss": float(loss_dict.d[k][0])})
             acc_loss_dict.step(loss_dict)
         return acc_loss_dict.pretty_print(self.args)
 
@@ -337,8 +334,8 @@ class Trainer:
             with torch.no_grad():
                 eval_loss_pp = self.do_eval()
             self.args.logger.info('final eval loss: %s', eval_loss_pp)
-            if self.wandb_run is not None:
-                self.wandb_run.summary({"final_eval_loss": float(eval_loss_pp)})
+            #if self.wandb_run is not None:
+            #    self.wandb_run.summary({"final_eval_loss": float(eval_loss_pp)})
             # output_dir = os.path.join(self.args.output_dir, f'checkpoint-epoch-{idx+1}')
             last_output_dir = os.path.join(self.args.output_dir, f'checkpoint-last')
             # self.args.logger.info('Saving model checkpoint to %s and %s', output_dir, last_output_dir)

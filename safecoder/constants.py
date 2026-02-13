@@ -76,7 +76,9 @@ VULNERABILITY_DETECTION_SPECIFIC = (
 
 SAFE_DESC_DATASETS = ['sec-desc', 'sec-new-desc',
                       'size_strategy_50_seed42','size_strategy_100_seed42','size_strategy_200_seed42','size_strategy_400_seed42','size_strategy_800_seed42','size_strategy_1141_seed42',
-                      'seed_strategy_400_seed42','seed_strategy_400_seed43','seed_strategy_400_seed44','seed_strategy_400_seed45','seed_strategy_400_seed46','seed_strategy_400_seed47']
+                      'seed_strategy_400_seed42','seed_strategy_400_seed43','seed_strategy_400_seed44','seed_strategy_400_seed45','seed_strategy_400_seed46','seed_strategy_400_seed47',
+                      'seed_strategy_200_seed42','seed_strategy_200_seed43','seed_strategy_200_seed44','seed_strategy_200_seed45','seed_strategy_200_seed46','seed_strategy_200_seed47',
+                      'seed_strategy_200_seed48','seed_strategy_200_seed49','seed_strategy_200_seed50']
 
 CWES_TRAINED = [
     'cwe-022',

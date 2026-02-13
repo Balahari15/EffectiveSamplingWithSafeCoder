@@ -116,7 +116,7 @@ def main():
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="balaharivignesh-balu-technische-hochschule-ingolstadt",
          # Set the wandb project where this run will be logged.
-        project="EffectiveSampling",
+        project="EffectiveSampling_new",
         # Track hyperparameters and run metadata.
         name=args.output_name, config=vars(args))
     

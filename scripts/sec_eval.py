@@ -44,6 +44,7 @@ def get_args():
     return args
 
 def codeql_create_db(info, src_dir, db_dir):
+    print(f'Creating CodeQL DB at {db_dir} from source at {src_dir}...')
     if info['language'] == 'py':
         cmd = '../codeql/codeql database create {} --quiet --language=python --overwrite --source-root {}'
     elif info['language'] == 'c':
@@ -67,6 +68,7 @@ def codeql_create_db(info, src_dir, db_dir):
     subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL)
 
 def codeql_analyze(info, db_dir, csv_path):
+    print(f'Analyzing CodeQL DB at {db_dir}...')
     if info['language'] in ('py', 'c', 'js', 'jsx', 'java', 'go', 'rb'):
         cmd = '../codeql/codeql database finalize {}'
         cmd = cmd.format(db_dir)
@@ -171,15 +173,15 @@ def eval_scenario(args, evaler, vul_type, scenario):
                 f.write(src)
         if name == 'output_srcs':
             if info['language'] == 'c':
-                shutil.copy2('Makefile.c', os.path.join(src_dir, 'Makefile'))
+                shutil.copy2('./scripts/Makefile.c', os.path.join(src_dir, 'Makefile'))
             elif info['language'] == 'java':
-                with open('compile_java.sh') as f:
+                with open('./scripts/compile_java.sh') as f:
                     makefile = f.read()
                 makefile = makefile.replace('CLASS_PATH', get_cp_args(info))
                 with open(os.path.join(src_dir, 'compile_java.sh'), 'w') as f:
                     f.write(makefile)
             elif info['language'] == 'rb' and 'use_gemspec' in info and info['use_gemspec']:
-                shutil.copy2('test.gemspec', output_dir)
+                shutil.copy2('./scripts/test.gemspec', output_dir)
 
     vuls = set()
     if len(output_srcs) != 0:
@@ -190,13 +192,16 @@ def eval_scenario(args, evaler, vul_type, scenario):
         codeql_analyze(info, db_dir, csv_path)
         if vul_type == 'cwe-078' and info['language'] == 'py':
             filter_cwe78_fps(src_dir, csv_path)
-        with open(csv_path) as csv_f:
-            reader = csv.reader(csv_f)
-            for row in reader:
-                if len(row) < 5: continue
-                src_fname = row[-5].split('/')[-1]
-                vuls.add(src_fname)
-
+        try:
+            with open(csv_path) as csv_f:
+                reader = csv.reader(csv_f)
+                for row in reader:
+                    if len(row) < 5: continue
+                    src_fname = row[-5].split('/')[-1]
+                    vuls.add(src_fname)
+        except FileNotFoundError:
+            print(f'CodeQL analysis failed for {vul_type}/{scenario}')
+            args.logger.warning(f'CodeQL analysis failed for {vul_type}/{scenario}')
     d = OrderedDict()
     d['vul_type'] = vul_type
     d['scenario'] = scenario
@@ -224,7 +229,7 @@ def eval_all(args, evaler, vul_types):
 
 def main():
     args = get_args()
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.output_dir)
     set_logging(args, None)
     set_seed(args.seed)
     args.logger.info(f'args: {args}')
